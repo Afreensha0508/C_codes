@@ -10,7 +10,7 @@
 #include<linux/version.h>
 
 
-#define DEVICE_NAME "mywait"
+#define DEVICE_NAME "waitqueue"
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("TechDhaba");
@@ -27,6 +27,8 @@ static int flag = 0;  // Condition for waking up
 static ssize_t my_read(struct file *filp, char __user *buf,
                        size_t len, loff_t *off)
 {
+if(*off>0)
+return 0;
     printk(KERN_INFO "mywait: Reader going to sleep...\n");
 
     // Wait until flag is set
@@ -37,10 +39,17 @@ static ssize_t my_read(struct file *filp, char __user *buf,
     // Clear flag and return to user
     flag = 0;
 
-    if (copy_to_user(buf, "done\n", 5))
+    if (copy_to_user(buf, "done\n", 5)==0)
+
+{
+*off+=5;
+     return 5;
+}
+      
+
         return -EFAULT;
 
-    return 5;
+    
 }
 
 // --- Write sets flag and wakes up reader ---
@@ -50,7 +59,7 @@ static ssize_t my_write(struct file *filp, const char __user *buf,
     printk(KERN_INFO "mywait: Writer waking up reader\n");
     flag = 1;
     wake_up_interruptible(&wq);
-    return len;
+ return len;
 }
 
 static struct file_operations fops = {
@@ -83,3 +92,4 @@ static void __exit waitq_exit(void)
 
 module_init(waitq_init);
 module_exit(waitq_exit);
+                                                      
