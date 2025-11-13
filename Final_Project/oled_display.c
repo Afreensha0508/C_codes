@@ -1,0 +1,121 @@
+#include <stdio.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
+#include <fcntl.h>
+#include <linux/i2c-dev.h>
+#include <sys/ioctl.h>
+#include <unistd.h>
+
+#define I2C_DEVICE "/dev/i2c-1"
+#define SSD1306_ADDR 0x3C
+#define WIDTH 128
+#define HEIGHT 32
+#include "oled_display.h"
+int i2c_fd;
+
+// Basic 5x8 font (only capital letters used here)
+const uint8_t font5x8[][5] = {
+    // A to Z
+    {0x7E, 0x11, 0x11, 0x7E, 0x00}, // A
+    {0x7F, 0x49, 0x49, 0x36, 0x00}, // B
+    {0x3E, 0x41, 0x41, 0x22, 0x00}, // C
+    {0x7F, 0x41, 0x41, 0x3E, 0x00}, // D
+    {0x7F, 0x49, 0x49, 0x41, 0x00}, // E
+    {0x7F, 0x09, 0x09, 0x01, 0x00}, // F
+    {0x3E, 0x41, 0x51, 0x72, 0x00}, // G
+    {0x7F, 0x08, 0x08, 0x7F, 0x00}, // H
+    {0x41, 0x7F, 0x41, 0x00, 0x00}, // I
+    {0x20, 0x40, 0x41, 0x3F, 0x00}, // J
+    {0x7F, 0x08, 0x14, 0x63, 0x00}, // K
+    {0x7F, 0x40, 0x40, 0x40, 0x00}, // L
+    {0x7F, 0x02, 0x04, 0x02, 0x7F}, // M
+    {0x7F, 0x06, 0x18, 0x7F, 0x00}, // N
+    {0x3E, 0x41, 0x41, 0x3E, 0x00}, // O
+    {0x7F, 0x09, 0x09, 0x06, 0x00}, // P
+    {0x3E, 0x41, 0x51, 0x21, 0x5E}, // Q
+    {0x7F, 0x09, 0x19, 0x66, 0x00}, // R
+    {0x26, 0x49, 0x49, 0x32, 0x00}, // S
+    {0x01, 0x7F, 0x01, 0x00, 0x00}, // T
+    {0x3F, 0x40, 0x40, 0x3F, 0x00}, // U
+    {0x1F, 0x20, 0x40, 0x20, 0x1F}, // V
+    {0x3F, 0x40, 0x30, 0x40, 0x3F}, // W
+    {0x63, 0x14, 0x08, 0x14, 0x63}, // X
+    {0x07, 0x08, 0x70, 0x08, 0x07}, // Y
+    {0x61, 0x51, 0x49, 0x45, 0x43}  // Z
+};
+
+void ssd1306_command(uint8_t cmd) {
+    uint8_t buffer[2] = {0x00, cmd};
+    write(i2c_fd, buffer, 2);
+}
+
+void oled_init() {
+    ssd1306_command(0xAE);
+    ssd1306_command(0xD5);
+    ssd1306_command(0x80);
+    ssd1306_command(0xA8);
+    ssd1306_command(HEIGHT - 1);
+    ssd1306_command(0xD3);
+    ssd1306_command(0x00);
+    ssd1306_command(0x40);
+    ssd1306_command(0x8D);
+    ssd1306_command(0x14);
+    ssd1306_command(0x20);
+    ssd1306_command(0x00);
+    ssd1306_command(0xA1);
+    ssd1306_command(0xC8);
+    ssd1306_command(0xDA);
+    ssd1306_command(0x02);
+    ssd1306_command(0x81);
+    ssd1306_command(0xCF);
+    ssd1306_command(0xD9);
+    ssd1306_command(0xF1);
+    ssd1306_command(0xDB);
+    ssd1306_command(0x40);
+    ssd1306_command(0xA4);
+    ssd1306_command(0xA6);
+    ssd1306_command(0xAF);
+}
+
+void oled_close() {
+    for (uint8_t page = 0; page < 4; page++) {
+        ssd1306_command(0xB0 + page);
+        ssd1306_command(0x00);
+      	ssd1306_command(0x10);
+        for (uint8_t col = 0; col < WIDTH; col++) {
+            uint8_t buffer[2] = {0x40, 0x00};
+            write(i2c_fd, buffer, 2);
+        }
+    }
+}
+
+void oled_set_cursor(uint8_t col, uint8_t page) {
+    ssd1306_command(0xB0 + page);
+    ssd1306_command(0x00 + (col & 0x0F));
+    ssd1306_command(0x10 + ((col >> 4) & 0x0F));
+}
+
+void oled_draw_char(char c) {
+    if (c < 'A' || c > 'Z') return;
+    const uint8_t* bitmap = font5x8[c - 'A'];
+    for (int i = 0; i < 5; i++) {
+        uint8_t buf[2] = {0x40, bitmap[i]};
+        write(i2c_fd, buf, 2);
+    }
+    uint8_t space[2] = {0x40, 0x00};  // 1-pixel spacing
+    write(i2c_fd, space, 2);
+}
+
+void oled_print(const char* str) {
+    oled_set_cursor(0, 0);  // start from top-left
+    while (*str) {
+	    char c = *str;
+	    if(c >= 'a' && c <= 'z')
+		    c-=32;
+        oled_draw_char(c);
+        str++;
+    }
+}
+
+

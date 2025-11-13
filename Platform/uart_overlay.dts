@@ -1,0 +1,28 @@
+/dts-v1/;
+/plugin/;
+
+/ {
+    compatible = "brcm,bcm2711";
+
+    fragment@0 {
+        target = <&uart1>;  // You can use uart0, uart1, etc.
+        __overlay__ {
+            status = "okay";
+            pinctrl-names = "default";
+            pinctrl-0 = <&uart1_pins>;
+
+            compatible = "my_uart_driver";
+        };
+    };
+
+    fragment@1 {
+        target = <&gpio>;
+        __overlay__ {
+            uart1_pins: uart1_pins {
+                brcm,pins = <14 15>;     // GPIO14 = TXD1, GPIO15 = RXD1
+                brcm,function = <2>;     // ALT5 for UART1
+            };
+        };
+    };
+};
+

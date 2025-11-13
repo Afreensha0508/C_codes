@@ -1,0 +1,23 @@
+/dts-v1/;
+/plugin/;
+
+/ {
+    compatible = "brcm,bcm2711"; 
+
+    fragment@0 {
+        target = <&soc>;
+
+        __overlay__ {
+            // Add the unit address (@fe100000) to the node name
+            custom_wdt_node@fe100000 { 
+                compatible = "snigdha,bcm2711-custom-wdt"; 
+                
+                // FIX: Add a 0 for the high 32-bits of the address.
+                // Format: <high_addr low_addr size>
+                reg = <0x0 0xfe100000 0x100>; 
+                
+                status = "okay";
+            };
+        };
+    };
+};
