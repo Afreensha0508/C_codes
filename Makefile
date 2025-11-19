@@ -1,13 +1,10 @@
-KERNEL_DIR = /lib/modules/$(shell uname -r)/build
-PWD = $(shell pwd)
+obj-m += pci_mydriver.o
 
-obj-m = GPIO_driver.o
+KDIR := /lib/modules/$(shell uname -r)/build
 
 all:
-	make -C $(KERNEL_DIR) M=$(PWD) modules
-	gcc user_app.c -o user_app
+	make -C $(KDIR) M=$(PWD) modules
 
 clean:
-	make -C $(KERNEL_DIR) M=$(PWD) clean
-	rm -f user_app
+	make -C $(KDIR) M=$(PWD) clean
 
